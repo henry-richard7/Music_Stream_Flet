@@ -1,6 +1,6 @@
 from flet import Page, app
 from flet_core import TemplateRoute
-from Pages import HomePage
+from Pages import HomePage, SearchPage
 
 
 def main(page: Page):
@@ -13,7 +13,7 @@ def main(page: Page):
             page.views.clear()
             page.views.append(HomePage())
         elif router.match("/search*"):
-            page.views.append()
+            page.views.append(SearchPage(data=route.route))
         elif router.match("/play*"):
             page.views.append()
 

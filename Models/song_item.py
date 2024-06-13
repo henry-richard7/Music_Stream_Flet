@@ -1,10 +1,4 @@
-from flet import (
-    Text,
-    Column,
-    Row,
-    ImageFit,
-    Image,
-)
+from flet import Text, Column, Row, ImageFit, Image, TextThemeStyle
 
 from flet_core import ControlEvent
 
@@ -35,7 +29,7 @@ class SongItem(Row):
                 controls=[
                     Text(
                         self.song_name,
-                        style="TitleLarge",
+                        style=TextThemeStyle.TITLE_LARGE,
                         font_family="Encore Font Circular Bold",
                     ),
                     Text(artist_name, font_family="Encore Font Circular Book"),
