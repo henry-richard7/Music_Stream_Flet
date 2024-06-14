@@ -19,6 +19,7 @@ from flet import (
 from API import YoutubeMusicApi
 
 
+# TODO: Initi Audio Player
 class MusicPlayer(Column):
     def __init__(
         self, video_id: str, song_name: str, artist_name: str, album_name: str, art: str
