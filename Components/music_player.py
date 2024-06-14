@@ -191,7 +191,7 @@ class MusicPlayer(Column):
         self.page.update()
 
     def set_seek_position(self, value: ControlEvent):
-        self.audio_player.seek(int(value.data))
+        self.audio_player.seek(int(value.control.value))
 
     def set_player_state(self, e: ControlEvent):
         if self.player_state_ == "playing":
