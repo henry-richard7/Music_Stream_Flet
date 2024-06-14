@@ -1,5 +1,4 @@
-from flet import Text, Column, Row, ImageFit, Image, TextThemeStyle
-
+from flet import Text, Column, Row, ImageFit, Image, TextThemeStyle, ElevatedButton
 from flet_core import ControlEvent
 
 
@@ -13,8 +12,6 @@ class SongItem(Row):
         self.artist_name = artist_name
         self.album_name = album_name
         self.art = art
-
-        self.on_click = self.click_handler
         self.padding = 10
 
         self.controls.append(
@@ -34,6 +31,17 @@ class SongItem(Row):
                     ),
                     Text(artist_name, font_family="Encore Font Circular Book"),
                     Text(album_name, font_family="Encore Font Circular Book"),
+                    ElevatedButton(
+                        "Play",
+                        data={
+                            "video_id": self.video_id,
+                            "song_name": self.song_name,
+                            "artist_name": self.artist_name,
+                            "album_name": self.album_name,
+                            "art": self.art,
+                        },
+                        on_click=self.click_handler,
+                    ),
                 ]
             )
         )
