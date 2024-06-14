@@ -14,6 +14,8 @@ from flet import (
     ProgressBar,
     AlertDialog,
     alignment,
+    CrossAxisAlignment,
+    MainAxisAlignment,
 )
 
 from API import YoutubeMusicApi
@@ -31,6 +33,7 @@ class MusicPlayer(Column):
         self.album_name = album_name
         self.art = art
         self.padding = 10
+        self.alignment = MainAxisAlignment.CENTER
 
         yt_api = YoutubeMusicApi()
         parsed_lyrics = yt_api.fetch_lyrics(video_id)
@@ -60,7 +63,27 @@ class MusicPlayer(Column):
             icon=icons.PAUSE_CIRCLE, on_click=self.set_player_state, icon_size=82
         )
 
-        controls = [self.audio_player, self.slider, self.audio_button]
+        controls = [
+            Text(
+                album_name,
+                style="Bold",
+                size=20,
+            ),
+            Image(src=self.art, width=300, height=300),
+            Text(
+                song_name,
+                style="Bold",
+                size=20,
+            ),
+            Text(
+                artist_name,
+                # style="Bold",
+                size=15,
+            ),
+            self.audio_player,
+            self.slider,
+            self.audio_button,
+        ]
         self.controls = controls
 
     def set_seek_position(self, value: ControlEvent):

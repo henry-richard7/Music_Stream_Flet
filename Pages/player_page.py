@@ -1,5 +1,5 @@
 from Components import MusicPlayer
-from flet import View, AppBar, Text
+from flet import View, AppBar, Text, ScrollMode
 from urllib.parse import parse_qs
 
 
@@ -10,6 +10,8 @@ class PlayerPage(View):
         self.appbar = AppBar(
             title=Text("Your Now Playing"),
         )
+
+        self.scroll = ScrollMode.ALWAYS
 
         parsed_data = parse_qs(data)
 
