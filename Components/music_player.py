@@ -13,11 +13,11 @@ from flet import (
     Column,
     ProgressBar,
     AlertDialog,
-    alignment,
+    icons,
     CrossAxisAlignment,
     MainAxisAlignment,
 )
-
+import httpx
 from API import YoutubeMusicApi
 
 
@@ -77,7 +77,30 @@ class MusicPlayer(Column):
             ),
             self.audio_player,
             self.slider,
-            self.audio_button,
+            Row(
+                controls=[
+                    self.audio_button,
+                    ElevatedButton(
+                        "Download",
+                        on_click=self.download_song,
+                        data={
+                            "url": direct_link,
+                            "song_name": song_name,
+                            "artist_name": artist_name,
+                            "album_name": album_name,
+                            "art": art,
+                            "extension": eval(
+                                music_result["results"]["mimeType"]
+                                .split(";")[-1]
+                                .split("codecs=")[-1]
+                            ),
+                            "page": self.page,
+                        },
+                        icon=icons.DOWNLOAD_SHARP,
+                    ),
+                ],
+                alignment=MainAxisAlignment.CENTER,
+            ),
         ]
         self.controls = controls
 
@@ -91,7 +114,6 @@ class MusicPlayer(Column):
                             content=Text(
                                 lyrics,
                                 text_align="center",
-                                font_family="Encore Font Circular Book",
                                 no_wrap=True,
                             ),
                         )
@@ -103,6 +125,70 @@ class MusicPlayer(Column):
             )
         else:
             lyrics = "Lyrics Not Available!"
+
+    def download_song(self, e: ControlEvent):
+        data_ = e.control.data
+
+        progress_bar = ProgressBar(width=500, height=10)
+        percentage_text = Text()
+
+        alert_dialog = AlertDialog(
+            modal=True,
+            title=Text("Currently Downloading"),
+            content=Column(
+                controls=[
+                    Row(
+                        controls=[
+                            Text("Song: "),
+                            Text(data_["song_name"]),
+                        ]
+                    ),
+                    Row(
+                        controls=[
+                            Text("Artist: "),
+                            Text(data_["artist_name"]),
+                        ]
+                    ),
+                    Row(
+                        controls=[
+                            Text("Album: "),
+                            Text(data_["album_name"]),
+                        ]
+                    ),
+                    Row(
+                        controls=[
+                            Text("Progress: "),
+                            percentage_text,
+                        ]
+                    ),
+                    progress_bar,
+                ],
+                height=200,
+            ),
+        )
+
+        self.page.dialog = alert_dialog
+        alert_dialog.open = True
+        self.page.update()
+
+        dl = 0
+        with httpx.stream("GET", data_["url"]) as response:
+            total_length = int(response.headers.get("content-length", 0))
+
+            with open(
+                f'Downloads/{data_["song_name"] + "." + data_["extension"]}', "wb"
+            ) as f:
+                for chunk in response.iter_bytes():
+                    dl += len(chunk)
+                    f.write(chunk)
+                    progress_bar.value = dl / total_length
+                    percentage_text.value = (
+                        str(round((dl / total_length) * 100, 2)) + "%"
+                    )
+                    self.page.update()
+
+        alert_dialog.open = False
+        self.page.update()
 
     def set_seek_position(self, value: ControlEvent):
         print(value.control.value)
@@ -127,6 +213,5 @@ class MusicPlayer(Column):
             self.page.update()
 
     def set_slider_value(self, value: ControlEvent):
-        # self.slider.value = int(value.data)
-        # self.page.update()
-        print(value.data)
+        self.slider.value = int(value.data)
+        self.page.update()
