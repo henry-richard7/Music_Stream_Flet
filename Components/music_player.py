@@ -32,16 +32,11 @@ class MusicPlayer(Column):
         self.artist_name = artist_name
         self.album_name = album_name
         self.art = art
-        self.padding = 10
         self.alignment = MainAxisAlignment.CENTER
+        self.horizontal_alignment = CrossAxisAlignment.CENTER
 
         yt_api = YoutubeMusicApi()
         parsed_lyrics = yt_api.fetch_lyrics(video_id)
-
-        if parsed_lyrics["success"]:
-            lyrics = parsed_lyrics["results"]
-        else:
-            lyrics = "Lyrics Not Available!"
 
         music_result = yt_api.get_direct_link(video_id)
         direct_link = music_result["results"]["url"]
@@ -85,6 +80,29 @@ class MusicPlayer(Column):
             self.audio_button,
         ]
         self.controls = controls
+
+        if parsed_lyrics["success"]:
+            lyrics = parsed_lyrics["results"]
+            self.controls.append(
+                Column(
+                    controls=[
+                        Card(
+                            width=600,
+                            content=Text(
+                                lyrics,
+                                text_align="center",
+                                font_family="Encore Font Circular Book",
+                                no_wrap=True,
+                            ),
+                        )
+                    ],
+                    horizontal_alignment="center",
+                    scroll=ScrollMode.AUTO,
+                    height=400,
+                )
+            )
+        else:
+            lyrics = "Lyrics Not Available!"
 
     def set_seek_position(self, value: ControlEvent):
         print(value.control.value)
