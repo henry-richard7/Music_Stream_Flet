@@ -23,7 +23,7 @@ from API import YoutubeMusicApi
 from ffmpeg import FFmpeg
 from io import BytesIO
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, TIT2, TPE1, TALB, APIC, error
+from mutagen.id3 import ID3, TIT2, TPE1, TALB, APIC, error, USLT
 
 
 def convert_to_mp3(file_bytes: bytes) -> bytes:
@@ -41,6 +41,7 @@ def add_meta_data(
     artist_name: str,
     album_name: str,
     art: str,
+    lyrics: str = None,
 ) -> BytesIO:
     muta_input = BytesIO(raw_mp3)
 
@@ -50,6 +51,13 @@ def add_meta_data(
     audio["TPE1"] = TPE1(encoding=3, text=artist_name)
     audio["TALB"] = TALB(encoding=3, text=album_name)
     cover_image_data = httpx.get(art).content
+
+    if lyrics is not None:
+        audio["USLT"] = USLT(
+            encoding=3,
+            lang="eng",
+            text=lyrics,
+        )
 
     audio["APIC"] = APIC(
         encoding=3,  # 3 is for utf-8
@@ -64,7 +72,6 @@ def add_meta_data(
     return muta_input
 
 
-# TODO: Initi Audio Player
 class MusicPlayer(Column):
     def __init__(
         self, video_id: str, song_name: str, artist_name: str, album_name: str, art: str
@@ -147,8 +154,11 @@ class MusicPlayer(Column):
         ]
         self.controls = controls
 
+        self.lyrics_present = parsed_lyrics["success"]
+
         if parsed_lyrics["success"]:
             lyrics = parsed_lyrics["results"]
+            self.lyrics = lyrics
             self.controls.append(
                 Column(
                     controls=[
@@ -234,6 +244,7 @@ class MusicPlayer(Column):
                 art=self.art,
                 artist_name=self.artist_name,
                 album_name=self.album_name,
+                lyrics=self.lyrics if self.lyrics_present else None,
             )
             with open(f"Downloads/{self.song_name}.mp3", "wb") as file:
                 file.write(meta_added_mp3.getvalue())
