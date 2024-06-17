@@ -40,7 +40,11 @@ class MusicPlayer(Column):
 
         music_result = yt_api.get_direct_link(video_id)
         direct_link = music_result["results"]["url"]
+        self.direct_link = direct_link
         duration = music_result["results"]["approxDurationMs"]
+        self.extension = eval(
+            music_result["results"]["mimeType"].split(";")[-1].split("codecs=")[-1]
+        )
 
         self.player_state_ = "playing"
         self.duration = eval(duration)
@@ -89,11 +93,7 @@ class MusicPlayer(Column):
                             "artist_name": artist_name,
                             "album_name": album_name,
                             "art": art,
-                            "extension": eval(
-                                music_result["results"]["mimeType"]
-                                .split(";")[-1]
-                                .split("codecs=")[-1]
-                            ),
+                            "extension": self.extension,
                             "page": self.page,
                         },
                         icon=icons.DOWNLOAD_SHARP,
@@ -140,19 +140,19 @@ class MusicPlayer(Column):
                     Row(
                         controls=[
                             Text("Song: "),
-                            Text(data_["song_name"]),
+                            Text(self.song_name),
                         ]
                     ),
                     Row(
                         controls=[
                             Text("Artist: "),
-                            Text(data_["artist_name"]),
+                            Text(self.artist_name),
                         ]
                     ),
                     Row(
                         controls=[
                             Text("Album: "),
-                            Text(data_["album_name"]),
+                            Text(self.album_name),
                         ]
                     ),
                     Row(
@@ -172,12 +172,10 @@ class MusicPlayer(Column):
         self.page.update()
 
         dl = 0
-        with httpx.stream("GET", data_["url"]) as response:
+        with httpx.stream("GET", self.direct_link) as response:
             total_length = int(response.headers.get("content-length", 0))
 
-            with open(
-                f'Downloads/{data_["song_name"] + "." + data_["extension"]}', "wb"
-            ) as f:
+            with open(f'Downloads/{self.song_name + "." + self.extension}', "wb") as f:
                 for chunk in response.iter_bytes():
                     dl += len(chunk)
                     f.write(chunk)
