@@ -19,11 +19,44 @@ from flet import (
 )
 import httpx
 from API import YoutubeMusicApi
+import re
 
 from ffmpeg import FFmpeg
 from io import BytesIO
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, TIT2, TPE1, TALB, APIC, error, USLT
+from mutagen.id3 import ID3, TIT2, TPE1, TALB, APIC, error, USLT, SYLT
+
+
+def synced_lyrics(artist_name, track_name, album_name, duration):
+    duration = duration / 1000
+    url = "https://lrclib.net/api/get"
+    params = {
+        "artist_name": artist_name,
+        "track_name": track_name,
+        "album_name": album_name,
+        "duration": duration,
+    }
+
+    response = httpx.get(url=url, params=params).json()
+    sync_lyrics = response.get("syncedLyrics")
+
+    if sync_lyrics:
+        pattern = re.compile(r"\[(\d+):(\d+\.\d+)\] (.+)")
+        lyrics = []
+        for line in sync_lyrics.split("\n"):
+            match = pattern.match(line)
+            if match:
+                minutes = int(match.group(1))
+                seconds = float(match.group(2))
+                text = match.group(3)
+                timestamp = int(
+                    (minutes * 60 + seconds) * 1000
+                )  # Convert to milliseconds
+                lyrics.append((text, timestamp))
+        return lyrics
+
+    else:
+        return None
 
 
 def convert_to_mp3(file_bytes: bytes) -> bytes:
@@ -42,6 +75,7 @@ def add_meta_data(
     album_name: str,
     art: str,
     lyrics: str = None,
+    synced_lyrics=None,
 ) -> BytesIO:
     muta_input = BytesIO(raw_mp3)
 
@@ -58,6 +92,18 @@ def add_meta_data(
             lang="eng",
             text=lyrics,
         )
+        print("Using Non Sync")
+
+    if synced_lyrics:
+
+        audio["SYLT"] = SYLT(
+            encoding=3,  # 3 is for utf-8
+            lang="eng",  # Language
+            format=2,  # 2 is for milliseconds
+            type=1,  # 1 is for lyrics
+            text=synced_lyrics,
+        )
+        print("Using Sync")
 
     audio["APIC"] = APIC(
         encoding=3,  # 3 is for utf-8
@@ -155,6 +201,12 @@ class MusicPlayer(Column):
         self.controls = controls
 
         self.lyrics_present = parsed_lyrics["success"]
+        self.synced_lyrics_data = synced_lyrics(
+            artist_name=self.artist_name,
+            track_name=self.song_name,
+            album_name=self.album_name,
+            duration=self.duration,
+        )
 
         if parsed_lyrics["success"]:
             lyrics = parsed_lyrics["results"]
@@ -238,14 +290,18 @@ class MusicPlayer(Column):
         download_opus = b"".join(download_opus)
         try:
             raw_mp3 = convert_to_mp3(download_opus)
+
+            # if self.synced_lyrics_data:
             meta_added_mp3 = add_meta_data(
                 raw_mp3,
                 song_name=self.song_name,
                 art=self.art,
                 artist_name=self.artist_name,
                 album_name=self.album_name,
+                synced_lyrics=self.synced_lyrics_data,
                 lyrics=self.lyrics if self.lyrics_present else None,
             )
+
             with open(f"Downloads/{self.song_name}.mp3", "wb") as file:
                 file.write(meta_added_mp3.getvalue())
         except Exception as e:
