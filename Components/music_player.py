@@ -20,6 +20,49 @@ from flet import (
 import httpx
 from API import YoutubeMusicApi
 
+from ffmpeg import FFmpeg
+from io import BytesIO
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, TIT2, TPE1, TALB, APIC, error
+
+
+def convert_to_mp3(file_bytes: bytes) -> bytes:
+    bytes_io = BytesIO(file_bytes)
+
+    process = FFmpeg().input("pipe:0").output("pipe:1", f="mp3")
+    raw_mp3 = process.execute(bytes_io)
+
+    return raw_mp3
+
+
+def add_meta_data(
+    raw_mp3: bytes,
+    song_name: str,
+    artist_name: str,
+    album_name: str,
+    art: str,
+) -> BytesIO:
+    muta_input = BytesIO(raw_mp3)
+
+    audio = MP3(muta_input)
+
+    audio["TIT2"] = TIT2(encoding=3, text=song_name)
+    audio["TPE1"] = TPE1(encoding=3, text=artist_name)
+    audio["TALB"] = TALB(encoding=3, text=album_name)
+    cover_image_data = httpx.get(art).content
+
+    audio["APIC"] = APIC(
+        encoding=3,  # 3 is for utf-8
+        mime="image/jpeg",  # image mime type
+        type=3,  # 3 is for the cover image
+        desc="Cover",
+        data=cover_image_data,
+    )
+
+    audio.save(muta_input)
+
+    return muta_input
+
 
 # TODO: Initi Audio Player
 class MusicPlayer(Column):
@@ -172,19 +215,34 @@ class MusicPlayer(Column):
         self.page.update()
 
         dl = 0
+        download_opus = []
         with httpx.stream("GET", self.direct_link) as response:
             total_length = int(response.headers.get("content-length", 0))
+            for chunk in response.iter_bytes():
+                dl += len(chunk)
+                download_opus.append(chunk)
+                progress_bar.value = dl / total_length
+                percentage_text.value = str(round((dl / total_length) * 100, 2)) + "%"
+                self.page.update()
 
-            with open(f'Downloads/{self.song_name + "." + self.extension}', "wb") as f:
-                for chunk in response.iter_bytes():
-                    dl += len(chunk)
-                    f.write(chunk)
-                    progress_bar.value = dl / total_length
-                    percentage_text.value = (
-                        str(round((dl / total_length) * 100, 2)) + "%"
-                    )
-                    self.page.update()
-
+        download_opus = b"".join(download_opus)
+        try:
+            raw_mp3 = convert_to_mp3(download_opus)
+            meta_added_mp3 = add_meta_data(
+                raw_mp3,
+                song_name=self.song_name,
+                art=self.art,
+                artist_name=self.artist_name,
+                album_name=self.album_name,
+            )
+            with open(f"Downloads/{self.song_name}.mp3", "wb") as file:
+                file.write(meta_added_mp3.getvalue())
+        except Exception as e:
+            print(e)
+            print("FFMPEG not found please install if you want to convert to MP3")
+            with open(f"Downloads/{self.song_name}.{self.extension}", "wb") as file:
+                byte_io = BytesIO(download_opus)
+                file.write(byte_io.getvalue())
         alert_dialog.open = False
         self.page.update()
 

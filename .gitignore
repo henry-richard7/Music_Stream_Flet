@@ -163,3 +163,5 @@ API/__pycache__
 Components/__pycache__
 Models/__pycache__
 Pages/__pycache__
+Downloads/*.mp3
+Downloads/*.opus

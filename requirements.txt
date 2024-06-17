@@ -1,1 +1,5 @@
 flet==0.22.*
+httpx
+requests
+python-ffmpeg
+mutagen
