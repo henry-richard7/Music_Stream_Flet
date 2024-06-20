@@ -21,6 +21,17 @@ import httpx
 from API import YoutubeMusicApi
 import re
 
+import platform
+import sys
+
+
+def ffmpeg_path():
+    if platform.system() == "Windows":
+        return "bin\\windows\\ffmpeg.exe"
+    else:
+        return "ffmpeg"
+
+
 from ffmpeg import FFmpeg
 from io import BytesIO
 from mutagen.mp3 import MP3
@@ -62,7 +73,7 @@ def synced_lyrics(artist_name, track_name, album_name, duration):
 def convert_to_mp3(file_bytes: bytes) -> bytes:
     bytes_io = BytesIO(file_bytes)
 
-    process = FFmpeg().input("pipe:0").output("pipe:1", f="mp3")
+    process = FFmpeg(executable=ffmpeg_path()).input("pipe:0").output("pipe:1", f="mp3")
     raw_mp3 = process.execute(bytes_io)
 
     return raw_mp3
